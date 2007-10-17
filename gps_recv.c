@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
 	int s, len, ifidx, one = 1;
 	struct sockaddr_in6 src;
 	struct sockaddr_in6 dst;
-	int srclen = sizeof(src);
+	socklen_t srclen = sizeof(src);
 	struct group_source_req gsreq;
 	char buf[1024];
 
@@ -49,11 +49,6 @@ int main(int argc, char *argv[]) {
 	cerror("Failed to join multicast group", setsockopt(s, IPPROTO_IPV6, MCAST_JOIN_SOURCE_GROUP, &gsreq, sizeof(gsreq)));
 
 	while ((len = recvfrom(s, buf, 1023, MSG_NOSIGNAL, (struct sockaddr*)&src, &srclen)) >= 0) {
-		//if (!IN6_ARE_ADDR_EQUAL(&src,
-
-		//if (src.sin6_port != htons(SPORT))
-		//	continue;
-
 		buf[len] = '\0';
 		puts(buf);
 	}
