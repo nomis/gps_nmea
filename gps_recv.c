@@ -51,6 +51,7 @@ int main(int argc, char *argv[]) {
 	while ((len = recvfrom(s, buf, 1023, MSG_NOSIGNAL, (struct sockaddr*)&src, &srclen)) >= 0) {
 		buf[len] = '\0';
 		puts(buf);
+		fflush(stdout);
 	}
 	xerror("Error receiving data");
 }
