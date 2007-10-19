@@ -58,12 +58,10 @@ int main(int argc, char *argv[]) {
 	cerror("Failed to bind source port", bind(s, (struct sockaddr*)&src, sizeof(src)));
 	cerror("Failed to set multicast interface", setsockopt(s, SOL_IPV6, IPV6_MULTICAST_IF, &ifidx, sizeof(ifidx)));
 
-	while (1) {
+	while (fgets(buf, 1024, fd) != NULL) {
 		char checksum;
 		int i, len;
 
-		if (fgets(buf, 1024, fd) == NULL)
-			continue;
 		len = strlen(buf);
 		if (buf[0] != '$' || len < 2)
 			continue;
