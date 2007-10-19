@@ -70,6 +70,8 @@ int main(int argc, char *argv[]) {
 	ios.c_cflag &= ~CRTSCTS;
 	ios.c_lflag |= CLOCAL;
 	ios.c_lflag |= ICANON;
+	cfsetispeed(&ios, B38400); 
+	cfsetospeed(&ios, B38400); 
 	cerror(argv[1], ioctl(fileno(fd), TCSETA, &ios));
 
 #ifdef GPS_NTP_C
