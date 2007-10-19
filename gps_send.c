@@ -3,17 +3,23 @@
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#ifdef GPS_NTP_C
+# include <sys/time.h>
+#endif
 #include <sys/types.h>
+#ifdef GPS_NTP_C
+# include <sched.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef GPS_NTP_C
+# include <syslog.h>
+#endif
 #include <termios.h>
 #include <unistd.h>
 
 #include "gps_nmea.h"
-
-#define xerror(msg) do { perror(msg); exit(2); } while(0)
-#define cerror(msg, expr) do { if (expr) xerror(msg); } while(0)
 
 int main(int argc, char *argv[]) {
 	int s, ifidx, one = 1;
@@ -22,11 +28,19 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in6 dst;
 	struct termios ios;
 	char buf[1024];
+#ifdef GPS_NTP_C
+	struct sched_param schedp;
+	pid_t pid;
+#endif
 
 	if (argc != 3) {
 		printf("Usage: %s <device> <interface>\n", argv[0]);
 		return 1;
 	}
+
+#ifdef GPS_NTP_C
+	ntp_init();
+#endif
 
 	s = socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	cerror("Socket error", !s);
@@ -45,6 +59,10 @@ int main(int argc, char *argv[]) {
 	dst.sin6_port = htons(DPORT);
 	dst.sin6_scope_id = ifidx;
 
+	cerror("Failed to set SO_REUSEADDR", setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)));
+	cerror("Failed to bind source port", bind(s, (struct sockaddr*)&src, sizeof(src)));
+	cerror("Failed to set multicast interface", setsockopt(s, SOL_IPV6, IPV6_MULTICAST_IF, &ifidx, sizeof(ifidx)));
+
 	fd = fopen(argv[1], "r");
 	cerror(argv[1], !fd);
 
@@ -54,13 +72,38 @@ int main(int argc, char *argv[]) {
 	ios.c_lflag |= ICANON;
 	cerror(argv[1], ioctl(fileno(fd), TCSETA, &ios));
 
-	cerror("Failed to set SO_REUSEADDR", setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)));
-	cerror("Failed to bind source port", bind(s, (struct sockaddr*)&src, sizeof(src)));
-	cerror("Failed to set multicast interface", setsockopt(s, SOL_IPV6, IPV6_MULTICAST_IF, &ifidx, sizeof(ifidx)));
+#ifdef GPS_NTP_C
+	cerror("Failed to get max scheduler priority",
+		(schedp.sched_priority = sched_get_priority_max(SCHED_FIFO)) < 0);
+	cerror("Failed to set scheduler policy", sched_setscheduler(0, SCHED_FIFO, &schedp));
+	cerror("Failed to renice process", nice(-20) != -20);
+#endif
+
+	if (geteuid() == 0) {
+		cerror("Failed to drop SGID permissions", setregid(getgid(), getgid()));
+		cerror("Failed to drop SUID permissions", setreuid(getuid(), getuid()));
+	}
+
+#ifdef GPS_NTP_C
+	pid = fork();
+	cerror("Failed to become a daemon", pid < 0);
+	if (pid)
+		exit(0);
+	close(0);
+	close(1);
+	close(2);
+
+	ntp_pps(fileno(fd));
+#endif
 
 	while (fgets(buf, 1024, fd) != NULL) {
 		char checksum;
 		int i, len;
+#ifdef GPS_NTP_C
+		struct timeval tv;
+
+		cerror("Failed to get current time", gettimeofday(&tv, NULL));
+#endif
 
 		len = strlen(buf);
 		if (buf[0] != '$' || len < 2)
@@ -100,6 +143,9 @@ int main(int argc, char *argv[]) {
 		
 		len = i+3;
 		buf[len+1] = '\0';
+#ifdef GPS_NTP_C
+		ntp_nmea(tv, buf);
+#endif
 		cerror(argv[2], sendto(s, buf, len, MSG_DONTWAIT|MSG_NOSIGNAL, (struct sockaddr*)&dst, sizeof(dst)) != len);
 	}
 	xerror(argv[1]);

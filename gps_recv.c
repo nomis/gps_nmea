@@ -9,9 +9,6 @@
 
 #include "gps_nmea.h"
 
-#define xerror(msg) do { perror(msg); exit(2); } while(0)
-#define cerror(msg, expr) do { if (expr) xerror(msg); } while(0)
-
 int main(int argc, char *argv[]) {
 	int s, len, ifidx, one = 1;
 	struct sockaddr_in6 src;
