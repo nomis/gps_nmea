@@ -8,6 +8,7 @@
 # include <sys/time.h>
 #endif
 #include <sys/types.h>
+#include <errno.h>
 #include <fcntl.h>
 #ifdef GPS_NTP_C
 # include <sched.h>
@@ -23,9 +24,22 @@
 
 #include "gps_nmea.h"
 
+/* Some code copied from taylor-uucp. */
+
+#define ICLEAR_IFLAG (BRKINT | ICRNL | IGNBRK | IGNCR | IGNPAR \
+	| INLCR | INPCK | ISTRIP | IXOFF | IXON \
+	| PARMRK | IMAXBEL)
+#define ICLEAR_OFLAG (OPOST)
+#define ICLEAR_CFLAG (CSIZE | PARENB | PARODD | HUPCL)
+#define ISET_CFLAG (CS8 | CREAD | CLOCAL)
+#define ICLEAR_LFLAG (ECHO | ECHOE | ECHOK | ECHONL | ICANON | IEXTEN \
+	| ISIG | NOFLSH | TOSTOP | PENDIN | CRTSCTS)
+
+/* ---- */
+
 int main(int argc, char *argv[]) {
-	int s, ifidx, tmp, one = 1;
-	FILE *fd;
+	int s, ifidx, one = 1, fd, iflags;
+	FILE *dev;
 	struct sockaddr_in6 src;
 	struct sockaddr_in6 dst;
 	struct termios ios;
@@ -65,21 +79,34 @@ int main(int argc, char *argv[]) {
 	cerror("Failed to bind source port", bind(s, (struct sockaddr*)&src, sizeof(src)));
 	cerror("Failed to set multicast interface", setsockopt(s, SOL_IPV6, IPV6_MULTICAST_IF, &ifidx, sizeof(ifidx)));
 
-	tmp = open(argv[1], O_RDONLY|O_NONBLOCK);
-	cerror(argv[1], tmp < 0);
+	fd = open(argv[1], O_RDONLY|O_NONBLOCK);
+	cerror(argv[1], fd < 0);
 
-	fd = fdopen(tmp, "r");
-	cerror(argv[1], !fd);
-
-	cerror(argv[1], ioctl(fileno(fd), TCGETA, &ios));
-	ios.c_cflag &= ~CRTSCTS;
-	ios.c_lflag |= CLOCAL;
-	ios.c_lflag |= ICANON;
+	iflags = fcntl(fd, F_GETFL, 0);
+	cerror("Failed to get file descriptor flags for opened serial port", iflags < 0);
+	iflags &= ~(O_NONBLOCK|O_NDELAY);
+	iflags = fcntl(fd, F_SETFL, iflags);
+	cerror("Failed to set file descriptor flags", (iflags & O_NONBLOCK) != 0);
+	cerror("Failed to get terminal attributes", tcgetattr(fd, &ios));
+	
+	ios.c_iflag &=~ ICLEAR_IFLAG;
+	ios.c_oflag &=~ ICLEAR_OFLAG;
+	ios.c_cflag &=~ ICLEAR_CFLAG;
+	ios.c_cflag |= ISET_CFLAG;
+	ios.c_lflag &=~ ICLEAR_LFLAG;
+	ios.c_cc[VMIN] = 1;
+	ios.c_cc[VTIME] = 0;
 	cfsetispeed(&ios, B38400);
 	cfsetospeed(&ios, B38400);
-	cerror(argv[1], ioctl(fileno(fd), TCSETA, &ios));
+
+	cerror("Failed to flush terminal input", ioctl(fd, TCFLSH, 0) < 0);
+	cerror("Failed to set terminal attributes", tcsetattr(fd, TCSANOW, &ios));
+
+	dev = fdopen(fd, "r");
+	cerror(argv[1], !dev);
 
 #ifdef GPS_NTP_C
+	//cerror("Failed to detach from tty", setsid() < 0);
 	cerror("Failed to get max scheduler priority",
 		(schedp.sched_priority = sched_get_priority_max(SCHED_FIFO)) < 0);
 	cerror("Failed to set scheduler policy", sched_setscheduler(0, SCHED_FIFO, &schedp));
@@ -100,10 +127,10 @@ int main(int argc, char *argv[]) {
 	close(1);
 	close(2);
 
-	ntp_pps(fileno(fd));
+	ntp_pps(fd);
 #endif
 
-	while (fgets(buf, 1024, fd) != NULL) {
+	while (!(errno = 0) && fgets(buf, 1024, dev) != NULL) {
 		char checksum;
 		int i, len;
 #ifdef GPS_NTP_C
@@ -155,5 +182,6 @@ int main(int argc, char *argv[]) {
 #endif
 		cerror(argv[2], sendto(s, buf, len, MSG_DONTWAIT|MSG_NOSIGNAL, (struct sockaddr*)&dst, sizeof(dst)) != len);
 	}
-	xerror(argv[1]);
+	cerror("Failed to close serial device", close(fd));
+	exit(0);
 }

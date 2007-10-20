@@ -106,13 +106,16 @@ static void *ntp_ppsmon(void *data) {
 		struct timeval tv;
 		gettimeofday(&tv, NULL);
 
-		if (ioctl(fd, TIOCMGET, &state) != 0)
-			break;
+		if (ioctl(fd, TIOCMGET, &state) != 0) {
+			xerror("Failed to get serial IO status");
+			return NULL;
+		}
 
 		state = (int)((state & TIOCM_CD) != 0);
 
 		if (last != state && state == 1) {
-			lastpps = tv;
+			lastpps.tv_usec = tv.tv_usec;
+			lastpps.tv_sec = tv.tv_sec;
 #ifndef QUIET
 			printf("PPS at %lu.%lu\n", tv.tv_sec, tv.tv_usec);
 #endif
@@ -120,8 +123,7 @@ static void *ntp_ppsmon(void *data) {
 
 		last = state;
 	}
-
-	printf("ppsmon! %d\n", fd);
+	xerror("Failed to wait for DCD");
 	return NULL;
 }
 
@@ -137,7 +139,6 @@ struct timeval ntp_getpps() {
 
 void ntp_invalidate() {
 	lastpps.tv_sec = 0;
-	lastpps.tv_usec = 0;
 }
 
 void ntp_nmea(const struct timeval tv, const char *buf) {
