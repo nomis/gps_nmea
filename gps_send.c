@@ -3,10 +3,12 @@
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #ifdef GPS_NTP_C
 # include <sys/time.h>
 #endif
 #include <sys/types.h>
+#include <fcntl.h>
 #ifdef GPS_NTP_C
 # include <sched.h>
 #endif
@@ -22,7 +24,7 @@
 #include "gps_nmea.h"
 
 int main(int argc, char *argv[]) {
-	int s, ifidx, one = 1;
+	int s, ifidx, tmp, one = 1;
 	FILE *fd;
 	struct sockaddr_in6 src;
 	struct sockaddr_in6 dst;
@@ -63,7 +65,10 @@ int main(int argc, char *argv[]) {
 	cerror("Failed to bind source port", bind(s, (struct sockaddr*)&src, sizeof(src)));
 	cerror("Failed to set multicast interface", setsockopt(s, SOL_IPV6, IPV6_MULTICAST_IF, &ifidx, sizeof(ifidx)));
 
-	fd = fopen(argv[1], "r");
+	tmp = open(argv[1], O_RDONLY|O_NONBLOCK);
+	cerror(argv[1], tmp < 0);
+
+	fd = fdopen(tmp, "r");
 	cerror(argv[1], !fd);
 
 	cerror(argv[1], ioctl(fileno(fd), TCGETA, &ios));
