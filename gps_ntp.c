@@ -16,6 +16,9 @@
 #define UNIT 0
 #define QUIET
 
+#define REFID_GPS ((uint32_t)"GPS")
+#define REFID_PPS ((uint32_t)"PPS")
+
 #define tv_to_ull(x) (unsigned long long)((unsigned long long)(x).tv_sec*1000000 + (unsigned long long)(x).tv_usec)
 
 /* Some code copied from gpsd (http://gpsd.berlios.be/). */
@@ -37,7 +40,8 @@ struct shmTime {
 	int precision;
 	int nsamples;
 	int valid;
-	int dummy[10];
+	uint32_t refid;
+	char dummy[6];
 };
 
 enum { LEAP_NOWARNING=0x00, LEAP_NOTINSYNC=0x03};
@@ -45,7 +49,7 @@ enum { LEAP_NOWARNING=0x00, LEAP_NOTINSYNC=0x03};
 /* Accuracy is assumed to be 2^PRECISION seconds -20 is approximately 954nS */
 #define PRECISION (-20)
 
-void PutTimeStamp(struct timeval *local, struct timeval *nmea, struct shmTime *shm, int leap) {
+void PutTimeStamp(struct timeval *local, struct timeval *nmea, struct shmTime *shm, int leap, uint32_t refid) {
 	shm->mode = 1;
 	shm->valid = 0;
 
@@ -57,6 +61,7 @@ void PutTimeStamp(struct timeval *local, struct timeval *nmea, struct shmTime *s
 	shm->clockTimeStampUSec = (int)nmea->tv_usec;
 	shm->receiveTimeStampSec = (time_t)local->tv_sec;
 	shm->receiveTimeStampUSec = (int)local->tv_usec;
+	shm->refid = refid;
 
 	__asm__ __volatile__ ("":::"memory");
 
@@ -221,7 +226,7 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 			}
 		}
 
-		PutTimeStamp(&pps, &nmea_tv, gps, LEAP_NOWARNING);
+		PutTimeStamp(&pps, &nmea_tv, gps, LEAP_NOWARNING, sync == 'A' ? REFID_GPS : REFID_PPS);
 #ifndef QUIET
 		printf("put time %lu, pps %lu.%lu\n", nmea_t, pps.tv_sec, pps.tv_usec);
 #endif
