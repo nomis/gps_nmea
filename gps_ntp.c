@@ -150,6 +150,7 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 		time_t nmea_t;
 		struct timeval nmea_tv;
 		struct timeval pps;
+		char sync;
 
 		nmea_time = &buf[7];
 		if (*nmea_time == '\0') { ntp_invalidate(); return; }
@@ -192,6 +193,8 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 		nmea_tm.tm_mon = DD(nmea_date+2)-1;
 		nmea_tm.tm_mday = DD(nmea_date);
 
+		sync = nmea_time[7];
+
 		nmea_t = mktime(&nmea_tm);
 		if (nmea_t == -1) { ntp_invalidate(); return; }
 		nmea_tv.tv_sec = nmea_t;
@@ -207,6 +210,16 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 
 		if (tv_to_ull(pps) > tv_to_ull(tv) || tv_to_ull(tv) - tv_to_ull(pps) > 500000)
 			{ ntp_invalidate(); return; }
+
+		if (sync != 'A') {
+			if (pps.tv_usec <= 25000)
+				nmea_tv.tv_sec = pps.tv_sec;
+			else if (pps.tv_usec >= 975000)
+				nmea_tv.tv_sec = pps.tv_sec+1;
+			else {
+				ntp_invalidate(); return;
+			}
+		}
 
 		PutTimeStamp(&pps, &nmea_tv, gps, LEAP_NOWARNING);
 #ifndef QUIET
