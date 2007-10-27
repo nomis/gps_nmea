@@ -16,8 +16,8 @@
 #define UNIT 0
 #define QUIET
 
-#define REFID_GPS ((uint32_t)"GPS")
-#define REFID_PPS ((uint32_t)"PPS")
+#define REFID_GPS "GPS"
+#define REFID_PPS "PPS"
 
 #define tv_to_ull(x) (unsigned long long)((unsigned long long)(x).tv_sec*1000000 + (unsigned long long)(x).tv_usec)
 
@@ -41,7 +41,7 @@ struct shmTime {
 	int nsamples;
 	int valid;
 	uint32_t refid;
-	char dummy[6];
+	char dummy[sizeof(int) * 10 - sizeof(uint32_t)];
 };
 
 enum { LEAP_NOWARNING=0x00, LEAP_NOTINSYNC=0x03};
@@ -49,7 +49,7 @@ enum { LEAP_NOWARNING=0x00, LEAP_NOTINSYNC=0x03};
 /* Accuracy is assumed to be 2^PRECISION seconds -20 is approximately 954nS */
 #define PRECISION (-20)
 
-void PutTimeStamp(struct timeval *local, struct timeval *nmea, struct shmTime *shm, int leap, uint32_t refid) {
+void PutTimeStamp(struct timeval *local, struct timeval *nmea, struct shmTime *shm, int leap, char *refid) {
 	shm->mode = 1;
 	shm->valid = 0;
 
@@ -61,7 +61,7 @@ void PutTimeStamp(struct timeval *local, struct timeval *nmea, struct shmTime *s
 	shm->clockTimeStampUSec = (int)nmea->tv_usec;
 	shm->receiveTimeStampSec = (time_t)local->tv_sec;
 	shm->receiveTimeStampUSec = (int)local->tv_usec;
-	shm->refid = refid;
+	shm->refid = *(uint32_t*)refid;
 
 	__asm__ __volatile__ ("":::"memory");
 
