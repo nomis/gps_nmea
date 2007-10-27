@@ -18,7 +18,7 @@
 
 #define tv_to_ull(x) (unsigned long long)((unsigned long long)(x).tv_sec*1000000 + (unsigned long long)(x).tv_usec)
 
-/* Some code copied from gpsd. */
+/* Some code copied from gpsd (http://gpsd.berlios.be/). */
 
 #define DD(s)   ((int)((s)[0]-'0')*10+(int)((s)[1]-'0'))
 #define CENTURY_BASE 2000
@@ -42,7 +42,7 @@ struct shmTime {
 
 enum { LEAP_NOWARNING=0x00, LEAP_NOTINSYNC=0x03};
 
-/* Accuracy is assumed to be 2^PRECISION seconds -10 is approximately 980uS */
+/* Accuracy is assumed to be 2^PRECISION seconds -20 is approximately 954nS */
 #define PRECISION (-20)
 
 void PutTimeStamp(struct timeval *local, struct timeval *nmea, struct shmTime *shm, int leap) {
