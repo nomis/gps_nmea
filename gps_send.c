@@ -106,17 +106,17 @@ int main(int argc, char *argv[]) {
 	cerror(argv[1], !dev);
 
 #ifdef GPS_NTP_C
-	//cerror("Failed to detach from tty", setsid() < 0);
+	pid = getpid();
 	cerror("Failed to get max scheduler priority",
 		(schedp.sched_priority = sched_get_priority_max(SCHED_FIFO)) < 0);
-	cerror("Failed to set scheduler policy", sched_setscheduler(0, SCHED_FIFO, &schedp));
-	cerror("Failed to renice process", nice(-20) != -20);
-#endif
-
-	if (geteuid() == 0) {
-		cerror("Failed to drop SGID permissions", setregid(getgid(), getgid()));
-		cerror("Failed to drop SUID permissions", setreuid(getuid(), getuid()));
+	if (schedp.sched_priority > 10) {
+		schedp.sched_priority -= 10;
+		cerror("Failed to set scheduler policy", sched_setscheduler(pid, SCHED_FIFO, &schedp));
+		schedp.sched_priority += 5;
+	} else {
+		cerror("Failed to set scheduler policy", sched_setscheduler(pid, SCHED_FIFO, &schedp));
 	}
+#endif
 
 #ifdef GPS_NTP_C
 	pid = fork();
@@ -127,8 +127,13 @@ int main(int argc, char *argv[]) {
 	close(1);
 	close(2);
 
-	ntp_pps(fd);
+	ntp_pps(fd, &schedp);
 #endif
+
+	if (geteuid() == 0) {
+		cerror("Failed to drop SGID permissions", setregid(getgid(), getgid()));
+		cerror("Failed to drop SUID permissions", setreuid(getuid(), getuid()));
+	}
 
 	while (!(errno = 0) && fgets(buf, 1024, dev) != NULL) {
 		char checksum;

@@ -18,6 +18,6 @@
 
 #ifdef GPS_NTP_C
 void ntp_init(void);
-void ntp_pps(int fd);
+void ntp_pps(int fd, const struct sched_param *schedp;);
 void ntp_nmea(const struct timeval tv, const char *buf);
 #endif

@@ -132,10 +132,11 @@ static void *ntp_ppsmon(void *data) {
 	return NULL;
 }
 
-void ntp_pps(int fd) {
+void ntp_pps(int fd, const struct sched_param *schedp) {
 	pthread_t pt;
 
 	cerror("Failed to start PPS thread", pthread_create(&pt, NULL, ntp_ppsmon, (void*)fd));
+	cerror("Failed to set scheduler policy for PPS thread", pthread_setschedparam(pt, SCHED_FIFO, schedp));
 }
 
 struct timeval ntp_getpps() {
