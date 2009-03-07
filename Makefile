@@ -1,4 +1,4 @@
-CFLAGS=-Wall -O2
+CFLAGS=-Wall -Wextra -O2
 .PHONY: all clean
 all: gps_send gps_recv gps_ntp
 clean:
