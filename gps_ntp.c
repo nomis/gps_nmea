@@ -104,7 +104,7 @@ void ntp_init(void) {
 }
 
 static void *ntp_ppsmon(void *data) {
-	int fd = (unsigned long)data;
+	int fd = (int)data;
 	int state = 0, last = 0;
 
 	while (ioctl(fd, TIOCMIWAIT, TIOCM_CD) == 0) {
@@ -132,7 +132,7 @@ static void *ntp_ppsmon(void *data) {
 	return NULL;
 }
 
-void ntp_pps(unsigned long fd, const struct sched_param *schedp) {
+void ntp_pps(int fd, const struct sched_param *schedp) {
 	pthread_t pt;
 
 	cerror("Failed to start PPS thread", pthread_create(&pt, NULL, ntp_ppsmon, (void*)fd));
