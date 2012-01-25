@@ -44,14 +44,30 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in6 dst;
 	struct termios ios;
 	char buf[1024];
+	int speed = B38400;
 #ifdef GPS_NTP_C
 	struct sched_param schedp;
 	pid_t pid;
 #endif
 
-	if (argc != 3) {
-		printf("Usage: %s <device> <interface>\n", argv[0]);
+	if (argc != 3 && argc != 4) {
+		printf("Usage: %s <device> <interface> [speed]\n", argv[0]);
 		return 1;
+	}
+
+	if (argc == 4) {
+		switch (atoi(argv[3])) {
+		case 2400: speed = B2400; break;
+		case 4800: speed = B4800; break;
+		case 9600: speed = B9600; break;
+		case 19200: speed = B19200; break;
+		case 38400: speed = B38400; break;
+		case 57600: speed = B57600; break;
+		case 115200: speed = B115200; break;
+		default:
+			printf("Speed not supported (2400,4800,9600,192000,38400,57600,115200)\n");
+			return 1;
+		}
 	}
 
 #ifdef GPS_NTP_C
@@ -96,8 +112,8 @@ int main(int argc, char *argv[]) {
 	ios.c_lflag &=~ ICLEAR_LFLAG;
 	ios.c_cc[VMIN] = 1;
 	ios.c_cc[VTIME] = 0;
-	cfsetispeed(&ios, B38400);
-	cfsetospeed(&ios, B38400);
+	cfsetispeed(&ios, speed);
+	cfsetospeed(&ios, speed);
 
 	cerror("Failed to flush terminal input", ioctl(fd, TCFLSH, 0) < 0);
 	cerror("Failed to set terminal attributes", tcsetattr(fd, TCSANOW, &ios));
