@@ -104,7 +104,7 @@ void ntp_init(void) {
 }
 
 static void *ntp_ppsmon(void *data) {
-	int fd = (int)data;
+	int fd = (int)(size_t)data;
 	int state = 0, last = 0;
 
 	while (ioctl(fd, TIOCMIWAIT, TIOCM_CD) == 0) {
@@ -135,7 +135,7 @@ static void *ntp_ppsmon(void *data) {
 void ntp_pps(int fd, const struct sched_param *schedp) {
 	pthread_t pt;
 
-	cerror("Failed to start PPS thread", pthread_create(&pt, NULL, ntp_ppsmon, (void*)fd));
+	cerror("Failed to start PPS thread", pthread_create(&pt, NULL, ntp_ppsmon, (void*)(size_t)fd));
 	cerror("Failed to set scheduler policy for PPS thread", pthread_setschedparam(pt, SCHED_FIFO, schedp));
 }
 
