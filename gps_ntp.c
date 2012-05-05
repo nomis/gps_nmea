@@ -46,10 +46,15 @@ struct shmTime {
 
 enum { LEAP_NOWARNING=0x00, LEAP_NOTINSYNC=0x03};
 
-/* Accuracy is assumed to be 2^PRECISION seconds -20 is approximately 954nS */
-#define PRECISION (-20)
+#ifndef SIMPLE
+/* Accuracy is assumed to be 2^PRECISION seconds -20 is approximately 954ns */
+# define PRECISION (-20)
+#else
+/* Accuracy is assumed to be 2^PRECISION seconds -10 is approximately 976ms */
+# define PRECISION (-10)
+#endif
 
-void PutTimeStamp(struct timeval *local, struct timeval *nmea, struct shmTime *shm, int leap, char *refid) {
+void PutTimeStamp(const struct timeval *local, const struct timeval *nmea, struct shmTime *shm, int leap, const char *refid) {
 	shm->mode = 1;
 	shm->valid = 0;
 
@@ -91,7 +96,9 @@ struct shmTime *AttachSharedMemory(int unit, int *shmid) {
 /* ---- */
 
 struct shmTime *gps;
+#ifndef SIMPLE
 volatile struct timeval lastpps;
+#endif
 
 void ntp_init(void) {
 	int shmid;
@@ -103,6 +110,7 @@ void ntp_init(void) {
 		(gps = AttachSharedMemory(UNIT, &shmid)) == NULL || shmid == -1);
 }
 
+#ifndef SIMPLE
 static void *ntp_ppsmon(void *data) {
 	int fd = (int)(size_t)data;
 	int state = 0, last = 0;
@@ -146,6 +154,9 @@ struct timeval ntp_getpps() {
 void ntp_invalidate() {
 	lastpps.tv_sec = 0;
 }
+#else
+void ntp_invalidate() {}
+#endif
 
 void ntp_nmea(const struct timeval tv, const char *buf) {
 	/* $GPRMC,191809,V,0000.0000,N,00000.0000,W,,,191007,004.8,W,N*01 */
@@ -155,7 +166,9 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 		struct tm nmea_tm;
 		time_t nmea_t;
 		struct timeval nmea_tv;
+#ifndef SIMPLE
 		struct timeval pps;
+#endif
 		char sync;
 
 		nmea_time = &buf[7];
@@ -206,6 +219,7 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 		nmea_tv.tv_sec = nmea_t;
 		nmea_tv.tv_usec = 0;
 
+#ifndef SIMPLE
 		pps = ntp_getpps();
 		if (pps.tv_sec == 0) {
 #ifndef QUIET
@@ -216,8 +230,13 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 
 		if (tv_to_ull(pps) > tv_to_ull(tv) || tv_to_ull(tv) - tv_to_ull(pps) > 500000)
 			{ ntp_invalidate(); return; }
+#else
+		nmea_tv.tv_sec++;
+		nmea_tv.tv_usec = 250000;
+#endif
 
 		if (sync != 'A') {
+#ifndef SIMPLE
 			if (pps.tv_usec <= 25000)
 				nmea_tv.tv_sec = pps.tv_sec;
 			else if (pps.tv_usec >= 975000)
@@ -225,11 +244,23 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 			else {
 				ntp_invalidate(); return;
 			}
+#else
+			return;
+#endif
 		}
 
-		PutTimeStamp(&pps, &nmea_tv, gps, LEAP_NOWARNING, sync == 'A' ? REFID_GPS : REFID_PPS);
+#ifndef SIMPLE
+		PutTimeStamp(&nmea_tv, &tv, gps, LEAP_NOWARNING, sync == 'A' ? REFID_GPS : REFID_PPS);
+#else
+		PutTimeStamp(&nmea_tv, &tv, gps, LEAP_NOWARNING, REFID_GPS);
+#endif
 #ifndef QUIET
+#ifndef SIMPLE
 		printf("put time %lu, pps %lu.%lu\n", nmea_t, pps.tv_sec, pps.tv_usec);
+#else
+		printf("put time %lu.%lu, nmea %lu.%lu\n", tv.tv_sec, tv.tv_usec, nmea_tv.tv_sec, nmea_tv.tv_usec);
+#endif
+		fflush(NULL);
 #endif
 	}
 }

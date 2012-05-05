@@ -1,3 +1,4 @@
 gps_ntp
 gps_recv
 gps_send
+gps_simple_ntp

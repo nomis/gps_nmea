@@ -143,7 +143,9 @@ int main(int argc, char *argv[]) {
 	close(1);
 	close(2);
 
+#ifndef SIMPLE
 	ntp_pps(fd, &schedp);
+#endif
 #endif
 
 	if (geteuid() == 0) {
