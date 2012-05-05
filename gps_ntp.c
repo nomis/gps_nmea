@@ -252,7 +252,11 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 #ifndef SIMPLE
 		PutTimeStamp(&pps, &nmea_tv, gps, LEAP_NOWARNING, sync == 'A' ? REFID_GPS : REFID_PPS);
 #else
-		PutTimeStamp(&tv, &nmea_tv, gps, LEAP_NOWARNING, REFID_GPS);
+		if (tv.tv_sec < 365*86400) {
+			settimeofday(&nmea_tv, NULL);
+		} else {
+			PutTimeStamp(&tv, &nmea_tv, gps, LEAP_NOWARNING, REFID_GPS);
+		}
 #endif
 #ifndef QUIET
 #ifndef SIMPLE
