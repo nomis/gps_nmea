@@ -38,10 +38,13 @@
 /* ---- */
 
 int main(int argc, char *argv[]) {
-	int s, ifidx, one = 1, fd, iflags;
-	FILE *dev;
+#ifndef SIMPLE
+	int s, ifidx, one = 1;
 	struct sockaddr_in6 src;
 	struct sockaddr_in6 dst;
+#endif
+	int fd, iflags;
+	FILE *dev;
 	struct termios ios;
 	char buf[1024];
 	int speed = B38400;
@@ -50,13 +53,24 @@ int main(int argc, char *argv[]) {
 	pid_t pid;
 #endif
 
+#ifndef SIMPLE
 	if (argc != 3 && argc != 4) {
 		printf("Usage: %s <device> <interface> [speed]\n", argv[0]);
 		return 1;
 	}
+#else
+	if (argc != 2 && argc != 3) {
+		printf("Usage: %s <device> [speed]\n", argv[0]);
+		return 1;
+	}
+#endif
 
+#ifndef SIMPLE
 	if (argc == 4) {
-		switch (atoi(argv[3])) {
+#else
+	if (argc == 3) {
+#endif
+		switch (atoi(argv[argc-1])) {
 		case 2400: speed = B2400; break;
 		case 4800: speed = B4800; break;
 		case 9600: speed = B9600; break;
@@ -74,6 +88,7 @@ int main(int argc, char *argv[]) {
 	ntp_init();
 #endif
 
+#ifndef SIMPLE
 	s = socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	cerror("Socket error", !s);
 
@@ -94,6 +109,7 @@ int main(int argc, char *argv[]) {
 	cerror("Failed to set SO_REUSEADDR", setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)));
 	cerror("Failed to bind source port", bind(s, (struct sockaddr*)&src, sizeof(src)));
 	cerror("Failed to set multicast interface", setsockopt(s, SOL_IPV6, IPV6_MULTICAST_IF, &ifidx, sizeof(ifidx)));
+#endif
 
 	fd = open(argv[1], O_RDONLY|O_NONBLOCK);
 	cerror(argv[1], fd < 0);
@@ -203,7 +219,9 @@ int main(int argc, char *argv[]) {
 #ifdef GPS_NTP_C
 		ntp_nmea(tv, buf);
 #endif
+#ifndef SIMPLE
 		cerror(argv[2], sendto(s, buf, len, MSG_DONTWAIT|MSG_NOSIGNAL, (struct sockaddr*)&dst, sizeof(dst)) != len);
+#endif
 	}
 	cerror("Failed to close serial device", close(fd));
 	exit(0);
