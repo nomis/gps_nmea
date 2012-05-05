@@ -42,6 +42,9 @@ int main(int argc, char *argv[]) {
 	int s, ifidx, one = 1;
 	struct sockaddr_in6 src;
 	struct sockaddr_in6 dst;
+#else
+	/* Disable everything except GPRMC */
+	char *init_string = "@NC 00001000\r\n";
 #endif
 	int fd, iflags;
 	FILE *dev;
@@ -111,7 +114,11 @@ int main(int argc, char *argv[]) {
 	cerror("Failed to set multicast interface", setsockopt(s, SOL_IPV6, IPV6_MULTICAST_IF, &ifidx, sizeof(ifidx)));
 #endif
 
+#ifndef SIMPLE
 	fd = open(argv[1], O_RDONLY|O_NONBLOCK);
+#else
+	fd = open(argv[1], O_RDWR|O_NONBLOCK);
+#endif
 	cerror(argv[1], fd < 0);
 
 	iflags = fcntl(fd, F_GETFL, 0);
@@ -133,6 +140,11 @@ int main(int argc, char *argv[]) {
 
 	cerror("Failed to flush terminal input", ioctl(fd, TCFLSH, 0) < 0);
 	cerror("Failed to set terminal attributes", tcsetattr(fd, TCSANOW, &ios));
+
+#ifdef SIMPLE
+	if (write(fd, init_string, strlen(init_string)) != (signed int)strlen(init_string))
+		xerror("write");
+#endif
 
 	dev = fdopen(fd, "r");
 	cerror(argv[1], !dev);
