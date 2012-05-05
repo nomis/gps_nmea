@@ -231,7 +231,6 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 		if (tv_to_ull(pps) > tv_to_ull(tv) || tv_to_ull(tv) - tv_to_ull(pps) > 500000)
 			{ ntp_invalidate(); return; }
 #else
-		(void)tv;
 		nmea_tv.tv_sec++;
 		nmea_tv.tv_usec = 250000;
 #endif
@@ -253,7 +252,7 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 #ifndef SIMPLE
 		PutTimeStamp(&pps, &nmea_tv, gps, LEAP_NOWARNING, sync == 'A' ? REFID_GPS : REFID_PPS);
 #else
-		PutTimeStamp(&nmea_tv, &nmea_tv, gps, LEAP_NOWARNING, REFID_GPS);
+		PutTimeStamp(&tv, &nmea_tv, gps, LEAP_NOWARNING, REFID_GPS);
 #endif
 #ifndef QUIET
 #ifndef SIMPLE
