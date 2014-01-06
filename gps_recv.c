@@ -53,8 +53,8 @@ int main(int argc, char *argv[]) {
 				|| rcv.sin6_scope_id != src.sin6_scope_id)
 			continue;
 		buf[len] = '\0';
-		puts(buf);
-		fflush(stdout);
+		cerror(NULL, puts(buf) <= 0);
+		cerror(NULL, fflush(stdout) != 0);
 	}
 	xerror("Error receiving data");
 }
