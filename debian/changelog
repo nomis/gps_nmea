@@ -1,3 +1,9 @@
+gps-nmea (2-1) wily; urgency=medium
+
+  * Add dh-systemd as build dep
+
+ -- Simon Arlott <ubuntu@sa.me.uk>  Mon, 09 May 2016 22:30:00 +0100
+
 gps-nmea (1-1) wily; urgency=medium
 
   * Use dh --with systemd
