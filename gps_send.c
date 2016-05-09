@@ -46,10 +46,9 @@ int main(int argc, char *argv[]) {
 	/* Disable everything except GPRMC */
 	char *init_string = "@NC 00001000\r\n";
 #endif
-	int fd, iflags;
-	FILE *dev;
+	int fd, len, iflags;
 	struct termios ios;
-	char buf[1024];
+	char buf[1024+1] = { 0 };
 	int speed = B38400;
 #ifdef GPS_NTP_C
 	struct sched_param schedp;
@@ -133,6 +132,7 @@ int main(int argc, char *argv[]) {
 	ios.c_cflag &=~ ICLEAR_CFLAG;
 	ios.c_cflag |= ISET_CFLAG;
 	ios.c_lflag &=~ ICLEAR_LFLAG;
+	ios.c_lflag |= ICANON;
 	ios.c_cc[VMIN] = 1;
 	ios.c_cc[VTIME] = 0;
 	cfsetispeed(&ios, speed);
@@ -145,9 +145,6 @@ int main(int argc, char *argv[]) {
 	if (write(fd, init_string, strlen(init_string)) != (signed int)strlen(init_string))
 		xerror("write");
 #endif
-
-	dev = fdopen(fd, "r");
-	cerror(argv[1], !dev);
 
 #ifdef GPS_NTP_C
 	pid = getpid();
@@ -189,16 +186,16 @@ int main(int argc, char *argv[]) {
 		cerror("Failed to drop SUID permissions", setreuid(SET_UID, SET_UID));
 	}
 
-	while (!(errno = 0) && fgets(buf, 1024, dev) != NULL) {
+	while (!(errno = 0) && (len = read(fd, buf, 1024)) >= 0) {
 		char checksum;
-		int i, len;
+		int i;
 #ifdef GPS_NTP_C
 		struct timeval tv;
 
 		cerror("Failed to get current time", gettimeofday(&tv, NULL));
 #endif
 
-		len = strlen(buf);
+		buf[len] = '\0';
 		if (buf[0] != '$' || len < 2)
 			continue;
 
