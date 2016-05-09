@@ -163,10 +163,12 @@ int main(int argc, char *argv[]) {
 #endif
 
 #ifdef GPS_NTP_C
+#ifndef NOFORK
 	pid = fork();
 	cerror("Failed to become a daemon", pid < 0);
 	if (pid)
 		exit(0);
+#endif
 	close(0);
 	close(1);
 	close(2);

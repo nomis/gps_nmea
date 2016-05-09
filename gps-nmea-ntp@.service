@@ -1,0 +1,12 @@
+[Unit]
+Description=GPS NMEA NTP Clock on /dev/%I
+Before=ntp.service
+Requires=network-online.target
+
+[Service]
+Environment=INTERFACE=dummy0
+EnvironmentFile=-/etc/default/gps-nmea-ntp_%i
+ExecStart=/usr/sbin/gps_ntp /dev/%I ${INTERFACE}
+
+[Install]
+WantedBy=multi-user.target

@@ -12,4 +12,4 @@ Description: GPS NMEA Utilities
  gps_send: Transmit GPS NMEA over the network using Multicast UDP
  gps_recv: Receive GPS_NMEA from the network using Multicast UDP
  gps_ntp: As gps_send but also update an NTP SHM clock with PPS
- gps_simple_ntp: As gps_ntp but without PPS
+ gps_simple_ntp: As gps_ntp but without gps_send or PPS
