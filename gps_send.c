@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 	iflags = fcntl(fd, F_SETFL, iflags);
 	cerror("Failed to set file descriptor flags", (iflags & O_NONBLOCK) != 0);
 	cerror("Failed to get terminal attributes", tcgetattr(fd, &ios));
-	
+
 	ios.c_iflag &=~ ICLEAR_IFLAG;
 	ios.c_oflag &=~ ICLEAR_OFLAG;
 	ios.c_cflag &=~ ICLEAR_CFLAG;
@@ -177,8 +177,14 @@ int main(int argc, char *argv[]) {
 #endif
 
 	if (geteuid() == 0) {
-		cerror("Failed to drop SGID permissions", setregid(getgid(), getgid()));
-		cerror("Failed to drop SUID permissions", setreuid(getuid(), getuid()));
+#ifndef SET_GID
+#define SET_GID getgid()
+#endif
+		cerror("Failed to drop SGID permissions", setregid(SET_GID, SET_GID));
+#ifndef SET_UID
+#define SET_UID getuid()
+#endif
+		cerror("Failed to drop SUID permissions", setreuid(SET_UID, SET_UID));
 	}
 
 	while (!(errno = 0) && fgets(buf, 1024, dev) != NULL) {
@@ -225,7 +231,7 @@ int main(int argc, char *argv[]) {
 		if (buf[i+2] >= 'A' && buf[i+2] <= 'F'
 				&& (buf[i+2] - 'A' + 10) != (checksum & 0x0F))
 			continue;
-		
+
 		len = i+3;
 		buf[len+1] = '\0';
 #ifdef GPS_NTP_C

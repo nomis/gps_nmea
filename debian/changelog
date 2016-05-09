@@ -1,0 +1,5 @@
+gps-nmea (0-1) wily; urgency=medium
+
+  * Initial release.
+
+ -- Simon Arlott <ubuntu@sa.me.uk>  Mon, 09 May 2016 13:29:44 +0100
