@@ -2,3 +2,7 @@ gps_ntp
 gps_recv
 gps_send
 gps_simple_ntp
+debian/files
+debian/gps-nmea.debhelper.log
+debian/gps-nmea.substvars
+debian/gps-nmea/
