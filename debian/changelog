@@ -1,3 +1,9 @@
+gps-nmea (3-1) xenial; urgency=medium
+
+  * Depend on network-online.target being finished
+
+ -- Simon Arlott <ubuntu@sa.me.uk>  Wed, 18 May 2016 22:48:04 +0100
+
 gps-nmea (2-1) wily; urgency=medium
 
   * Add dh-systemd as build dep
