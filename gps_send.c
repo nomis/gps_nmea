@@ -60,6 +60,7 @@ int main(int argc, char *argv[]) {
 	struct group *grp;
 	uid_t uid;
 	gid_t gid;
+	const char *device;
 
 #ifndef SIMPLE
 	if (argc < 5 || argc > 6) {
@@ -87,6 +88,7 @@ int main(int argc, char *argv[]) {
 
 	uid = pwd->pw_uid;
 	gid = grp->gr_gid;
+	device = argv[3];
 
 	if (uid == 0) {
 		printf("Not running as root\n");
@@ -140,11 +142,11 @@ int main(int argc, char *argv[]) {
 #endif
 
 #ifndef SIMPLE
-	fd = open(argv[1], O_RDONLY|O_NONBLOCK);
+	fd = open(device, O_RDONLY|O_NONBLOCK);
 #else
-	fd = open(argv[1], O_RDWR|O_NONBLOCK);
+	fd = open(device, O_RDWR|O_NONBLOCK);
 #endif
-	cerror(argv[1], fd < 0);
+	cerror(device, fd < 0);
 
 	iflags = fcntl(fd, F_GETFL, 0);
 	cerror("Failed to get file descriptor flags for opened serial port", iflags < 0);
