@@ -10,6 +10,8 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <grp.h>
+#include <pwd.h>
 #ifdef GPS_NTP_C
 # include <sched.h>
 #endif
@@ -54,23 +56,47 @@ int main(int argc, char *argv[]) {
 	struct sched_param schedp;
 	pid_t pid;
 #endif
+	struct passwd *pwd;
+	struct group *grp;
+	uid_t uid;
+	gid_t gid;
 
 #ifndef SIMPLE
-	if (argc != 3 && argc != 4) {
-		printf("Usage: %s <device> <interface> [speed]\n", argv[0]);
+	if (argc < 5 || argc > 6) {
+		printf("Usage: %s <user> <group> <device> <interface> [speed]\n", argv[0]);
 		return 1;
 	}
 #else
-	if (argc != 2 && argc != 3) {
-		printf("Usage: %s <device> [speed]\n", argv[0]);
+	if (argc < 4 || argc > 5) {
+		printf("Usage: %s <user> <group> <device> [speed]\n", argv[0]);
 		return 1;
 	}
 #endif
 
+	pwd = getpwnam(argv[1]);
+	if (pwd == NULL) {
+		printf("Unknown user %s\n", argv[1]);
+		return 1;
+	}
+
+	grp = getgrnam(argv[2]);
+	if (grp == NULL) {
+		printf("Unknown group %s\n", argv[2]);
+		return 1;
+	}
+
+	uid = pwd->pw_uid;
+	gid = grp->gr_gid;
+
+	if (uid == 0) {
+		printf("Not running as root\n");
+		return 1;
+	}
+
 #ifndef SIMPLE
-	if (argc == 4) {
+	if (argc == 6) {
 #else
-	if (argc == 3) {
+	if (argc == 5) {
 #endif
 		switch (atoi(argv[argc-1])) {
 		case 2400: speed = B2400; break;
@@ -165,6 +191,7 @@ int main(int argc, char *argv[]) {
 	cerror("Failed to become a daemon", pid < 0);
 	if (pid)
 		exit(0);
+	setsid();
 #endif
 	close(0);
 	close(1);
@@ -175,16 +202,8 @@ int main(int argc, char *argv[]) {
 #endif
 #endif
 
-	if (geteuid() == 0) {
-#ifndef SET_GID
-#define SET_GID getgid()
-#endif
-		cerror("Failed to drop SGID permissions", setregid(SET_GID, SET_GID));
-#ifndef SET_UID
-#define SET_UID getuid()
-#endif
-		cerror("Failed to drop SUID permissions", setreuid(SET_UID, SET_UID));
-	}
+	cerror("Failed to drop SGID permissions", setregid(gid, gid));
+	cerror("Failed to drop SUID permissions", setreuid(uid, uid));
 
 	while (!(errno = 0) && (len = read(fd, buf, 1024)) >= 0) {
 		char checksum;

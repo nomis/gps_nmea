@@ -1,6 +1,6 @@
 .PHONY: all clean install
 
-CFLAGS=-Wall -Wextra -Wshadow -ggdb -O2 -DSET_UID=1 -DSET_GID=1 -DNOFORK
+CFLAGS=-Wall -Wextra -Wshadow -ggdb -O2 -DNOFORK
 INSTALL=install
 
 prefix=/usr

@@ -1,3 +1,9 @@
+gps-nmea (5-1) xenial; urgency=medium
+
+  * Require uid/gid to be specified
+
+ -- Simon Arlott <ubuntu@sa.me.uk>  Fri, 20 May 2016 21:22:26 +0100
+
 gps-nmea (4-1) xenial; urgency=medium
 
   * Add debug package
