@@ -6,3 +6,6 @@ debian/files
 debian/gps-nmea.debhelper.log
 debian/gps-nmea.substvars
 debian/gps-nmea/
+debian/gps-nmea-dbg.debhelper.log
+debian/gps-nmea-dbg.substvars
+debian/gps-nmea-dbg/

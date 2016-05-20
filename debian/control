@@ -13,3 +13,9 @@ Description: GPS NMEA Utilities
  gps_recv: Receive GPS_NMEA from the network using Multicast UDP
  gps_ntp: As gps_send but also update an NTP SHM clock with PPS
  gps_simple_ntp: As gps_ntp but without gps_send or PPS
+
+Package: gps-nmea-dbg
+Architecture: any
+Depends: gps-nmea (= ${binary:Version}), ${misc:Depends}
+Description: debugging symboles for gps-nmea
+ This package contains the debugging symbols for gps-nmea

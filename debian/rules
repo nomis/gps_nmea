@@ -2,3 +2,9 @@
 
 %:
 	dh $@ --with systemd
+
+override_dh_strip:
+	dh_strip --dbg-package=gps-nmea-dbg
+
+override_dh_auto_install:
+	dh_auto_install --destdir=debian/gps-nmea
