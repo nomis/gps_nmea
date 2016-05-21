@@ -17,5 +17,5 @@ Description: GPS NMEA Utilities
 Package: gps-nmea-dbg
 Architecture: any
 Depends: gps-nmea (= ${binary:Version}), ${misc:Depends}
-Description: debugging symboles for gps-nmea
+Description: debugging symbols for gps-nmea
  This package contains the debugging symbols for gps-nmea
