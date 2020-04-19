@@ -1,3 +1,9 @@
+gps-nmea (7-2) bionic; urgency=medium
+
+  * Update for bionic
+
+ -- Simon Arlott <ubuntu@sa.me.uk>  Sun, 19 Apr 2020 15:25:44 +0100
+
 gps-nmea (7-1) xenial; urgency=medium
 
   * Use the correct argument for the device filename
