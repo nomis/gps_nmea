@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 %:
-	dh $@ --with systemd
+	dh $@
 
 override_dh_strip:
 	dh_strip --dbg-package=gps-nmea-dbg

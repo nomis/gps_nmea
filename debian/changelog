@@ -1,3 +1,9 @@
+gps-nmea (7-3) focal; urgency=medium
+
+  * Update for focal
+
+ -- Simon Arlott <ubuntu@sa.me.uk>  Mon, 27 Mar 2023 19:32:55 +0100
+
 gps-nmea (7-2) bionic; urgency=medium
 
   * Update for bionic

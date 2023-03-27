@@ -2,8 +2,8 @@ Source: gps-nmea
 Section: misc
 Priority: optional
 Maintainer: Simon Arlott <ubuntu@sa.me.uk>
-Build-Depends: debhelper (>= 9), dh-systemd
-Standards-Version: 3.9.6
+Build-Depends: debhelper (>= 12)
+Standards-Version: 4.1.4
 
 Package: gps-nmea
 Architecture: any
