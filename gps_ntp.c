@@ -165,7 +165,7 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 	/*              1 2         3 4          5 678      9             */
 	if (!strncmp(buf, "$GPRMC,", 7)) {
 		const char *nmea_time, *nmea_skip, *nmea_date;
-		struct tm nmea_tm;
+		struct tm nmea_tm = { 0 };
 		time_t nmea_t;
 		struct timeval nmea_tv;
 #ifndef SIMPLE
