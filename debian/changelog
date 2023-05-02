@@ -1,3 +1,9 @@
+gps-nmea (8-0) focal; urgency=medium
+
+  * Fix bug with time conversion
+
+ -- Simon Arlott <ubuntu@sa.me.uk>  Tue, 02 May 2023 12:46:46 +0100
+
 gps-nmea (7-3) focal; urgency=medium
 
   * Update for focal
