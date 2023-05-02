@@ -253,7 +253,7 @@ int main(int argc, char *argv[]) {
 			continue;
 
 		len = i+3;
-		buf[len+1] = '\0';
+		buf[len] = '\0';
 #ifdef GPS_NTP_C
 		ntp_nmea(tv, buf);
 #endif
