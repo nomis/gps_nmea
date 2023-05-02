@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <string.h>
+#include <systemd/sd-daemon.h>
 #include <syslog.h>
 #include <time.h>
 #include <pthread.h>
@@ -108,6 +109,7 @@ void ntp_init(void) {
 	cerror("Failed to lock memory pages", mlockall(MCL_CURRENT | MCL_FUTURE));
 	cerror("Failed to attach shared memory for refclock",
 		(gps = AttachSharedMemory(UNIT, &shmid)) == NULL || shmid == -1);
+	sd_notifyf(0, "READY=1\nSTATUS=Init\n");
 }
 
 #ifndef SIMPLE
@@ -130,7 +132,7 @@ static void *ntp_ppsmon(void *data) {
 			lastpps.tv_usec = tv.tv_usec;
 			lastpps.tv_sec = tv.tv_sec;
 #ifndef QUIET
-			printf("PPS at %lu.%lu\n", tv.tv_sec, tv.tv_usec);
+			printf("PPS at %lu.%06lu\n", tv.tv_sec, tv.tv_usec);
 #endif
 		}
 
@@ -172,37 +174,37 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 		char sync;
 
 		nmea_time = &buf[7];
-		if (*nmea_time == '\0') { ntp_invalidate(); return; }
+		if (*nmea_time == '\0') { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
 
 		nmea_skip = strstr(nmea_time, ","); // 1
-		if (nmea_skip == NULL) { ntp_invalidate(); return; }
+		if (nmea_skip == NULL) { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
 
 		nmea_skip = strstr(&nmea_skip[1], ","); // 2
-		if (nmea_skip == NULL) { ntp_invalidate(); return; }
+		if (nmea_skip == NULL) { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
 
 		nmea_skip = strstr(&nmea_skip[1], ","); // 3
-		if (nmea_skip == NULL) { ntp_invalidate(); return; }
+		if (nmea_skip == NULL) { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
 
 		nmea_skip = strstr(&nmea_skip[1], ","); // 4
-		if (nmea_skip == NULL) { ntp_invalidate(); return; }
+		if (nmea_skip == NULL) { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
 
 		nmea_skip = strstr(&nmea_skip[1], ","); // 5
-		if (nmea_skip == NULL) { ntp_invalidate(); return; }
+		if (nmea_skip == NULL) { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
 
 		nmea_skip = strstr(&nmea_skip[1], ","); // 6
-		if (nmea_skip == NULL) { ntp_invalidate(); return; }
+		if (nmea_skip == NULL) { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
 
 		nmea_skip = strstr(&nmea_skip[1], ","); // 7
-		if (nmea_skip == NULL) { ntp_invalidate(); return; }
+		if (nmea_skip == NULL) { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
 
 		nmea_skip = strstr(&nmea_skip[1], ","); // 8
-		if (nmea_skip == NULL) { ntp_invalidate(); return; }
+		if (nmea_skip == NULL) { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
 
 		nmea_date = &nmea_skip[1];
-		if (*nmea_date == '\0') { ntp_invalidate(); return; }
+		if (*nmea_date == '\0') { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
 
 		nmea_skip = strstr(&nmea_skip[1], ","); // 9
-		if (nmea_skip == NULL) { ntp_invalidate(); return; }
+		if (nmea_skip == NULL) { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
 
 		nmea_tm.tm_hour = DD(nmea_time);
 		nmea_tm.tm_min = DD(nmea_time+2);
@@ -215,7 +217,13 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 		sync = nmea_time[7];
 
 		nmea_t = mktime(&nmea_tm);
-		if (nmea_t == -1) { ntp_invalidate(); return; }
+		if (nmea_t == -1) {
+			ntp_invalidate();
+			sd_notifyf(0, "STATUS=Invalid time: %s (year=%d, mon=%d, mday=%d, hour=%d, min=%d, sec=%d, isdst=%d)\n",
+				buf, nmea_tm.tm_year, nmea_tm.tm_mon, nmea_tm.tm_mday,
+				nmea_tm.tm_hour, nmea_tm.tm_min, nmea_tm.tm_sec, nmea_tm.tm_isdst);
+			return;
+		}
 		nmea_tv.tv_sec = nmea_t;
 		nmea_tv.tv_usec = 0;
 
@@ -225,11 +233,23 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 #ifndef QUIET
 			printf("got time %lu, but no pps\n", nmea_t);
 #endif
+			sd_notifyf(0, "STATUS=Time %lu, no pps (%c)\n", nmea_t, sync);
 			return;
 		}
 
-		if (tv_to_ull(pps) > tv_to_ull(tv) || tv_to_ull(tv) - tv_to_ull(pps) > 500000)
-			{ ntp_invalidate(); return; }
+		if (tv_to_ull(pps) > tv_to_ull(tv)) {
+			ntp_invalidate();
+			sd_notifyf(0, "STATUS=Time %lu, pps late %lu.%06lu > %lu.%06lu (%c)\n",
+				nmea_t, pps.tv_sec, pps.tv_usec, tv.tv_sec, tv.tv_usec, sync);
+			return;
+		}
+
+		if (tv_to_ull(tv) - tv_to_ull(pps) > 500000) {
+			ntp_invalidate();
+			sd_notifyf(0, "STATUS=Time %lu, nmea late %lu.%06lu - %lu.%06lu = %llu (%c)\n",
+				nmea_t, tv.tv_sec, tv.tv_usec, pps.tv_sec, pps.tv_usec, tv_to_ull(tv) - tv_to_ull(pps), sync);
+			return;
+		}
 #else
 		nmea_tv.tv_sec++;
 		nmea_tv.tv_usec = 250000;
@@ -237,12 +257,15 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 
 		if (sync != 'A') {
 #ifndef SIMPLE
-			if (pps.tv_usec <= 25000)
+			if (pps.tv_usec <= 25000) {
 				nmea_tv.tv_sec = pps.tv_sec;
-			else if (pps.tv_usec >= 975000)
+			} else if (pps.tv_usec >= 975000) {
 				nmea_tv.tv_sec = pps.tv_sec+1;
-			else {
-				ntp_invalidate(); return;
+			} else {
+				ntp_invalidate();
+				sd_notifyf(0, "STATUS=Time %lu, at %lu.%06lu pps %lu.%06lu out of range (%c)\n",
+					nmea_t, tv.tv_sec, tv.tv_usec, pps.tv_sec, pps.tv_usec, sync);
+				return;
 			}
 #else
 			return;
@@ -260,11 +283,16 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 #endif
 #ifndef QUIET
 #ifndef SIMPLE
-		printf("put time %lu, pps %lu.%lu\n", nmea_t, pps.tv_sec, pps.tv_usec);
+		printf("put time %lu, pps %lu.%06lu\n", nmea_t, pps.tv_sec, pps.tv_usec);
 #else
-		printf("put time %lu.%lu, nmea %lu.%lu\n", tv.tv_sec, tv.tv_usec, nmea_tv.tv_sec, nmea_tv.tv_usec);
+		printf("put time %lu.%06lu, nmea %lu.%06lu\n", tv.tv_sec, tv.tv_usec, nmea_tv.tv_sec, nmea_tv.tv_usec);
 #endif
 		fflush(NULL);
+#endif
+
+#ifndef SIMPLE
+		sd_notifyf(0, "STATUS=Put (%u) time %lu, at %lu.%06lu pps %lu.%06lu (%c)\n",
+			gps->count, nmea_t, tv.tv_sec, tv.tv_usec, pps.tv_sec, pps.tv_usec, sync);
 #endif
 	}
 }

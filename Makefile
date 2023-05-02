@@ -22,6 +22,6 @@ gps_send: gps_send.c gps_nmea.h
 gps_recv: gps_recv.c gps_nmea.h
 	$(CC) $(CFLAGS) -o $@ $<
 gps_ntp: gps_ntp.c gps_send.c gps_nmea.h
-	$(CC) $(CFLAGS) -o $@ $< -lpthread
+	$(CC) $(CFLAGS) -o $@ $< -lpthread -lsystemd
 gps_simple_ntp: gps_ntp.c gps_send.c gps_nmea.h
-	$(CC) $(CFLAGS) -DSIMPLE -o $@ $< -lpthread
+	$(CC) $(CFLAGS) -DSIMPLE -o $@ $< -lpthread -lsystemd

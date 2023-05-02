@@ -2,7 +2,7 @@ Source: gps-nmea
 Section: misc
 Priority: optional
 Maintainer: Simon Arlott <ubuntu@sa.me.uk>
-Build-Depends: debhelper (>= 12)
+Build-Depends: debhelper (>= 12), libsystemd-dev
 Standards-Version: 4.1.4
 
 Package: gps-nmea
