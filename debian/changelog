@@ -1,3 +1,9 @@
+gps-nmea (8-1) jammy; urgency=medium
+
+  * Update for jammy
+
+ -- Simon Arlott <ubuntu@sa.me.uk>  Sat, 31 May 2025 09:47:36 +0100
+
 gps-nmea (8-0) focal; urgency=medium
 
   * Fix bug with time conversion
