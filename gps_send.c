@@ -17,6 +17,7 @@
 #endif
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #ifdef GPS_NTP_C
 # include <syslog.h>
@@ -44,10 +45,8 @@ int main(int argc, char *argv[]) {
 	int s, ifidx, one = 1;
 	struct sockaddr_in6 src;
 	struct sockaddr_in6 dst;
-#else
-	/* Disable everything except GPRMC */
-	char *init_string = "@NC 00001000\r\n";
 #endif
+	char *init_string = "\r\n\r\n$PMTK251,115200*1F\r\n$PMTK313,1*2E\r\n$PMTK314,0,1,0,1,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*34\r\n";
 	int fd, len, iflags;
 	struct termios ios;
 	char buf[1024+1] = { 0 };
@@ -63,13 +62,13 @@ int main(int argc, char *argv[]) {
 	const char *device;
 
 #ifndef SIMPLE
-	if (argc < 5 || argc > 6) {
-		printf("Usage: %s <user> <group> <device> <interface> [speed]\n", argv[0]);
+	if (argc != 6) {
+		printf("Usage: %s <user> <group> <device> <interface> <speed>\n", argv[0]);
 		return 1;
 	}
 #else
-	if (argc < 4 || argc > 5) {
-		printf("Usage: %s <user> <group> <device> [speed]\n", argv[0]);
+	if (argc != 5) {
+		printf("Usage: %s <user> <group> <device> <speed>\n", argv[0]);
 		return 1;
 	}
 #endif
@@ -95,23 +94,17 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-#ifndef SIMPLE
-	if (argc == 6) {
-#else
-	if (argc == 5) {
-#endif
-		switch (atoi(argv[argc-1])) {
-		case 2400: speed = B2400; break;
-		case 4800: speed = B4800; break;
-		case 9600: speed = B9600; break;
-		case 19200: speed = B19200; break;
-		case 38400: speed = B38400; break;
-		case 57600: speed = B57600; break;
-		case 115200: speed = B115200; break;
-		default:
-			printf("Speed not supported (2400,4800,9600,192000,38400,57600,115200)\n");
-			return 1;
-		}
+	switch (atoi(argv[argc-1])) {
+	case 2400: speed = B2400; break;
+	case 4800: speed = B4800; break;
+	case 9600: speed = B9600; break;
+	case 19200: speed = B19200; break;
+	case 38400: speed = B38400; break;
+	case 57600: speed = B57600; break;
+	case 115200: speed = B115200; break;
+	default:
+		printf("Speed not supported (2400,4800,9600,192000,38400,57600,115200)\n");
+		return 1;
 	}
 
 #ifdef GPS_NTP_C
@@ -122,7 +115,7 @@ int main(int argc, char *argv[]) {
 	s = socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	cerror("Socket error", !s);
 
-	ifidx = if_nametoindex(argv[2]);
+	ifidx = if_nametoindex(argv[4]);
 	cerror("Interface not found", !ifidx);
 
 	src.sin6_family = AF_INET6;
@@ -141,11 +134,7 @@ int main(int argc, char *argv[]) {
 	cerror("Failed to set multicast interface", setsockopt(s, SOL_IPV6, IPV6_MULTICAST_IF, &ifidx, sizeof(ifidx)));
 #endif
 
-#ifndef SIMPLE
-	fd = open(device, O_RDONLY|O_NONBLOCK);
-#else
 	fd = open(device, O_RDWR|O_NONBLOCK);
-#endif
 	cerror(device, fd < 0);
 
 	iflags = fcntl(fd, F_GETFL, 0);
@@ -169,10 +158,8 @@ int main(int argc, char *argv[]) {
 	cerror("Failed to flush terminal input", ioctl(fd, TCFLSH, 0) < 0);
 	cerror("Failed to set terminal attributes", tcsetattr(fd, TCSANOW, &ios));
 
-#ifdef SIMPLE
 	if (write(fd, init_string, strlen(init_string)) != (signed int)strlen(init_string))
 		xerror("write");
-#endif
 
 #ifdef GPS_NTP_C
 	pid = getpid();
@@ -258,7 +245,7 @@ int main(int argc, char *argv[]) {
 		ntp_nmea(tv, buf);
 #endif
 #ifndef SIMPLE
-		cerror(argv[2], sendto(s, buf, len, MSG_DONTWAIT|MSG_NOSIGNAL, (struct sockaddr*)&dst, sizeof(dst)) != len);
+		cerror(argv[4], sendto(s, buf, len, MSG_DONTWAIT|MSG_NOSIGNAL, (struct sockaddr*)&dst, sizeof(dst)) != len);
 #endif
 	}
 	cerror("Failed to close serial device", close(fd));

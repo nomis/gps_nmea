@@ -8,7 +8,7 @@ After=network-online.target
 Environment=INTERFACE=dummy0
 EnvironmentFile=-/etc/default/gps-nmea-ntp_%i
 Type=notify
-ExecStart=/usr/sbin/gps_ntp ${USER} ${GROUP} /dev/%I ${INTERFACE}
+ExecStart=/usr/sbin/gps_ntp ${USER} ${GROUP} /dev/%I ${INTERFACE} ${SPEED}
 
 [Install]
 WantedBy=multi-user.target

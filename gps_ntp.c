@@ -8,6 +8,7 @@
 #include <syslog.h>
 #include <time.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <termios.h>
 
@@ -127,9 +128,9 @@ static void *ntp_ppsmon(void *data) {
 			return NULL;
 		}
 
-		state = (int)((state & TIOCM_CD) != 0);
+		state &= TIOCM_CD;
 
-		if (last != state && state == 1) {
+		if (last != state && state) {
 			lastpps.tv_usec = tv.tv_usec;
 			lastpps.tv_sec = tv.tv_sec;
 #ifndef QUIET
@@ -166,7 +167,7 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 	/*              1 2         3 4          5 678      9             */
 	/* $GNRMC,122632.000,A,0000.0000,N,00000.0000,W,0.11,83.54,070725,,,A*56 */
 	/*                  1 2         3 4          5 6    7     8      9       */
-	if (!strncmp(buf, "$GPRMC,", 7)) {
+	if (!strncmp(buf, "$GNRMC,", 7) || !strncmp(buf, "$GPRMC,", 7)) {
 		const char *nmea_time, *nmea_skip, *nmea_date;
 		struct tm nmea_tm = { 0 };
 		time_t nmea_t;
@@ -181,6 +182,8 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 
 		nmea_skip = strstr(nmea_time, ","); // 1
 		if (nmea_skip == NULL) { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
+
+		sync = nmea_skip[1];
 
 		nmea_skip = strstr(&nmea_skip[1], ","); // 2
 		if (nmea_skip == NULL) { ntp_invalidate(); sd_notifyf(0, "STATUS=Invalid: %s\n", buf); return; }
@@ -216,8 +219,6 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 		nmea_tm.tm_year = (CENTURY_BASE + DD(nmea_date+4)) - 1900;
 		nmea_tm.tm_mon = DD(nmea_date+2)-1;
 		nmea_tm.tm_mday = DD(nmea_date);
-
-		sync = nmea_time[7];
 
 		nmea_t = mktime(&nmea_tm);
 		if (nmea_t == -1) {
