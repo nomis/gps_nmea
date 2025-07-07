@@ -1,3 +1,9 @@
+gps-nmea (9-0) jammy; urgency=medium
+
+  * Handle NMEA output with milliseconds
+
+ -- Simon Arlott <ubuntu@sa.me.uk>  Mon, 07 Jul 2025 13:34:39 +0100
+
 gps-nmea (8-1) jammy; urgency=medium
 
   * Update for jammy

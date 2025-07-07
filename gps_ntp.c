@@ -25,6 +25,7 @@
 /* Some code copied from gpsd (http://gpsd.berlios.be/). */
 
 #define DD(s)   ((int)((s)[0]-'0')*10+(int)((s)[1]-'0'))
+#define DDD(s)   ((int)((s)[0]-'0')*100+(int)((s)[1]-'0')*10+(int)((s)[2]-'0'))
 #define CENTURY_BASE 2000
 
 /* Some code copied from radioclkd (Jonathan A. Buzzard <jonathan@buzzard.org.uk>). */
@@ -163,6 +164,8 @@ void ntp_invalidate() {}
 void ntp_nmea(const struct timeval tv, const char *buf) {
 	/* $GPRMC,191809,V,0000.0000,N,00000.0000,W,,,191007,004.8,W,N*01 */
 	/*              1 2         3 4          5 678      9             */
+	/* $GNRMC,122632.000,A,0000.0000,N,00000.0000,W,0.11,83.54,070725,,,A*56 */
+	/*                  1 2         3 4          5 6    7     8      9       */
 	if (!strncmp(buf, "$GPRMC,", 7)) {
 		const char *nmea_time, *nmea_skip, *nmea_date;
 		struct tm nmea_tm = { 0 };
@@ -226,6 +229,17 @@ void ntp_nmea(const struct timeval tv, const char *buf) {
 		}
 		nmea_tv.tv_sec = nmea_t;
 		nmea_tv.tv_usec = 0;
+
+		if (nmea_time[6] == '.') {
+			nmea_tv.tv_usec = DD(nmea_time+7) * 1000;
+			if (nmea_tv.tv_usec != 0) {
+				ntp_invalidate();
+				sd_notifyf(0, "STATUS=Invalid time: %s (year=%d, mon=%d, mday=%d, hour=%d, min=%d, sec=%d, msec=%ld, isdst=%d)\n",
+					buf, nmea_tm.tm_year, nmea_tm.tm_mon, nmea_tm.tm_mday,
+					nmea_tm.tm_hour, nmea_tm.tm_min, nmea_tm.tm_sec, nmea_tv.tv_usec / 1000, nmea_tm.tm_isdst);
+				return;
+			}
+		}
 
 #ifndef SIMPLE
 		pps = ntp_getpps();
