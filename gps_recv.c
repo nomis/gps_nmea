@@ -26,8 +26,8 @@ int main(int argc, char *argv[]) {
 	s = socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	cerror("Socket error", !s);
 
-    ifidx = if_nametoindex(argv[1]);
-    cerror("Interface not found", !ifidx);
+	ifidx = if_nametoindex(argv[1]);
+	cerror("Interface not found", !ifidx);
 
 	src.sin6_family = AF_INET6;
 	cerror("Invalid source", !inet_pton(AF_INET6, argv[2], &src.sin6_addr));
